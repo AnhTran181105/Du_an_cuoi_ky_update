@@ -1,244 +1,368 @@
-using MediaPlayer;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using WMPLib;
-
-namespace Du_an_cuoi_ki
+namespace WindowsFormsApp1
 {
-    public partial class Gameplay : Form
+    public partial class Form1 : Form
     {
-        // Them reference
-        WindowsMediaPlayer An_diem;
-        WindowsMediaPlayer Tru_diem_nhe;
-        WindowsMediaPlayer Tru_diem_nang;
-        WindowsMediaPlayer Nhac_nen;
-        int player_speed = 4;
-        int td_roi=4;
-        int diem = 3;
-        string[,] bang_xep_hang = new string[10, 10];
-        Image Rac1 = Image.FromFile("Picture\\Rác 1.png");
-        Image Rac2 = Image.FromFile("Picture\\Rác 2.png");
-        Image Rac3 = Image.FromFile("Picture\\Rác 3.png");
-        private List<PictureBox> racList = new List<PictureBox>();
-        private Random rnd = new Random();
-        // Gioi han duoi
-        Label bottomBorder = new Label();
-        public Gameplay()
+        PictureBox[] stars;
+        int backgroundspeed;
+        Random rnd;
+        int playerspeed = 5;
+        int MunitionSpeed = 20;
+        PictureBox[] munitions;
+        Image munition;
+        WindowsMediaPlayer gamemedia;
+        WindowsMediaPlayer shootmedia;
+        WindowsMediaPlayer explosion;
+
+        PictureBox[] enemies;
+        int enemiesspeed;
+
+        //khai báo một số biến cho game
+        int score;
+        int level;
+        int difficulty;
+        bool pause;
+        bool gameisover;
+
+        public Form1()
         {
             InitializeComponent();
-            // Them am thanh
-            An_diem = new WindowsMediaPlayer();
-            Tru_diem_nhe = new WindowsMediaPlayer();
-            Tru_diem_nang = new WindowsMediaPlayer();
-            Nhac_nen = new WindowsMediaPlayer();
-            // Tao duong dan
-            An_diem.URL = "Sound\\Ăn điểm.mp3";
-            Tru_diem_nhe.URL = "Sound\\Trừ điểm nhẹ.mp3";
-            Tru_diem_nang.URL = "Sound\\Trừ điểm nặng.mp3";
-            Nhac_nen.URL = "Sound\\Nhạc nền.mp3";
-            // Setting 
-            Nhac_nen.settings.setMode("", true);
-            Nhac_nen.settings.volume = 15;
-            Player2.Visible = false;
-            Player3.Visible = false;
-            Thua.Visible = false;
-            SpawnRac();
         }
 
-        private void GameOver()
+        private void Form1_Load(object sender, EventArgs e)
         {
-            RacDichuyen.Stop();
-            Nhac_nen.controls.stop();
-            Thua.Visible = true;
-        }
+            //đầu game sẽ không pause và gameisover
+            pause = false;
+            gameisover = false;
+            //Level và điểm đầu trò chơi:
+            level = 1;
+            score = 0;
 
-        private void RightMove_Tick(object sender, EventArgs e)
-        {
-            if (Player1.Visible == true)
-            {
-                if (Player1.Right < this.Width - 30) Player1.Left += player_speed;
-            }
-            else if (Player2.Visible == true)
-            {
-                if (Player2.Right < this.Width - 30) Player2.Left += player_speed;
-            }
-            else if (Player3.Visible == true)
-            {
-                if (Player3.Right < this.Width - 30) Player3.Left += player_speed;
-            }
-        }
+            int loaiRac;
+            enemiesspeed = 4;
 
-        private void LeftMove_Tick(object sender, EventArgs e)
-        {
-            if (Player1.Visible == true)
+            Image apple = Properties.Resources.apple;
+            Image bag = Properties.Resources.bag;
+            Image can = Properties.Resources.can;
+            enemies = new PictureBox[15];
+            for (int i = 0; i < enemies.Length; i++)
             {
-                if (Player1.Left > 10) Player1.Left -= player_speed;
-            }
-            else if (Player2.Visible == true)
-            {
-                if (Player2.Left > 10) Player2.Left -= player_speed;
-            }
-            else if (Player3.Visible == true)
-            {
-                if (Player3.Left > 10) Player3.Left -= player_speed;
-            }
-        }
+                // Khởi tạo PictureBox
+                enemies[i] = new PictureBox();
 
-        private void Gameplay_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Right) RightMove.Start();
-            if (e.KeyCode == Keys.Left) LeftMove.Start();
-            if (e.KeyCode == Keys.Z)
-            {
-                if (Player2.Visible == true) Player1.Location = Player2.Location;
-                else if (Player3.Visible == true) Player1.Location = Player3.Location;
-                Player1.Visible = true;
-                Player2.Visible = false;
-                Player3.Visible = false;
-            }
-            else if (e.KeyCode == Keys.X)
-            {
-                if (Player1.Visible == true) Player2.Location = Player1.Location;
-                else if (Player3.Visible == true) Player2.Location = Player3.Location;
-                Player1.Visible = false;
-                Player2.Visible = true;
-                Player3.Visible = false;
-            }
-            else if (e.KeyCode == Keys.C)
-            {
-                if (Player1.Visible == true) Player3.Location = Player1.Location;
-                else if (Player2.Visible == true) Player3.Location = Player2.Location;
-                Player1.Visible = false;
-                Player2.Visible = false;
-                Player3.Visible = true;
-            }
-        }
+                // Đặt kích thước cho PictureBox
+                enemies[i].Size = new Size(40, 40);
 
-        private void Gameplay_KeyUp(object sender, KeyEventArgs e)
-        {
-            LeftMove.Stop();
-            RightMove.Stop();
-        }
+                // Chế độ hiển thị hình ảnh trong PictureBox
+                enemies[i].SizeMode = PictureBoxSizeMode.Zoom;
 
-        private void SpawnRac()
-        {
-            int loaiRac = rnd.Next(1, 4); // Giá trị 1, 2, hoặc 3
-            int vitriX;
-            // Đảm bảo rác không trùng vị trí
-            bool isValidPosition;
-            do
+                // Loại bỏ đường viền của PictureBox
+                enemies[i].BorderStyle = BorderStyle.None;
+
+                // Đặt thuộc tính Visible của PictureBox thành false, nghĩa là các đối tượng PictureBox không hiển thị ban đầu
+                enemies[i].Visible = false;
+
+                // Thêm PictureBox vào form
+                this.Controls.Add(enemies[i]);
+
+                // Đặt vị trí của PictureBox trên form
+                enemies[i].Location = new Point((i + 1) * 50, -50);
+            }
+            enemies[0].Image = apple;
+            enemies[1].Image = bag;
+            enemies[2].Image = can;
+            try
             {
-                isValidPosition = true;
-                vitriX = rnd.Next(10, this.ClientSize.Width - 50); // Vị trí ngang ngẫu nhiên
-                if (racList == null)
+                munition = Image.FromFile(@"C:\assert\munition.png"); // Tải ảnh đạn
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi tải hình ảnh đạn: " + ex.Message);
+                return;
+            }
+            
+            munitions = new PictureBox[3];
+            for (int i = 0; i < munitions.Length; i++)
+            {
+                munitions[i] = new PictureBox();
+                munitions[i].Size = new Size(8, 8);
+                munitions[i].Image = munition;
+                munitions[i].SizeMode = PictureBoxSizeMode.Zoom;
+                munitions[i].BorderStyle = BorderStyle.None;
+                this.Controls.Add(munitions[i]);
+            }
+            this.Controls.Add(Player);
+            backgroundspeed = 4;
+            stars = new PictureBox[10];
+            rnd = new Random();
+            for (int i = 0; i < stars.Length; i++)
+            {
+                stars[i] = new PictureBox();
+                stars[i].BorderStyle = BorderStyle.None;
+                stars[i].Location = new Point(rnd.Next(20, 580), rnd.Next(-10, 400));
+
+                if (i % 2 == 1)
                 {
-                    racList = new List<PictureBox>(); // Initialize the racList
+                    stars[i].Size = new Size(2, 2);
+                    stars[i].BackColor = Color.Wheat;
                 }
-                // Kiểm tra khoảng cách với các rác khác
-                foreach (var existingRac in racList) // Đổi tên biến trong foreach
+                else
                 {
-                    if (Math.Abs(existingRac.Location.X - vitriX) < 50) // Khoảng cách tối thiểu
+                    stars[i].Size = new Size(3, 3);
+                    stars[i].BackColor = Color.DarkGray;
+                }
+
+                this.Controls.Add(stars[i]);
+            }
+            gamemedia = new WindowsMediaPlayer();
+            shootmedia = new WindowsMediaPlayer();
+            explosion = new WindowsMediaPlayer();
+            ///Load all song
+            shootmedia.URL = "C:\\assert\\shoot.mp3";
+            shootmedia.settings.setMode("loop", true);
+            gamemedia.URL = "C:\\assert\\GameSong.mp3";
+            gamemedia.controls.play();
+        }
+ 
+
+        /// <summary>
+        /// Background moving
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            for (int i = 0; i < stars.Length / 2; i++)
+            {
+                stars[i].Top += backgroundspeed;
+
+                if (stars[i].Top >= this.Height)
+                {
+                    stars[i].Top = -stars[i].Height;
+                }
+            }
+            for (int i = stars.Length / 2; i < stars.Length; i++)
+            {
+                stars[i].Top += backgroundspeed - 2;
+
+                if (stars[i].Top >= this.Height)
+                {
+                    stars[i].Top = -stars[i].Height;
+                }
+                this.Controls.Add(stars[i]);
+            }
+            
+        }
+
+        private void LeftMoveTimer_Tick(object sender, EventArgs e)
+        {
+            if (Player.Left > 10)
+            {
+                Player.Left -= playerspeed;
+            }
+        }
+        private void RightMoveTimer_Tick(object sender, EventArgs e)
+        {
+            if (Player.Right < 580)
+            {
+                Player.Left += playerspeed;
+            }
+        }
+
+        // Hàm di chuyển xuống dưới
+        private void DownMoveTimer_Tick(object sender, EventArgs e)
+        {
+            if (Player.Top < 400)
+            {
+                Player.Top += playerspeed;
+            }
+        }
+
+        // Hàm di chuyển lên trên
+        private void UpMoveTimer_Tick(object sender, EventArgs e)
+        {
+            if (Player.Top > 10)
+            {
+                Player.Top -= playerspeed;
+            }
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!pause)
+            {
+
+                if (e.KeyCode == Keys.Right)
+                {
+                    RightMoveTimer.Start();
+                }
+                if (e.KeyCode == Keys.Left)
+                {
+                    LeftMoveTimer.Start();
+                }
+                if (e.KeyCode == Keys.Down)
+                {
+                    DownMoveTimer.Start();
+                }
+                if (e.KeyCode == Keys.Up)
+                {
+                    UpMoveTimer.Start();
+                }
+            }    
+
+        }
+
+        private void Form1_KeyUp(object sender, KeyEventArgs e)
+        {
+            RightMoveTimer.Stop();
+            LeftMoveTimer.Stop();
+            DownMoveTimer.Stop();
+            UpMoveTimer.Stop();
+            if (e.KeyCode == Keys.Space) // Kiểm tra phím Space
+            {
+                if (!gameisover) // Kiểm tra xem trò chơi đã kết thúc chưa
+                {
+                    if (pause) // Nếu đang tạm dừng
                     {
-                        isValidPosition = false;
-                        break;
+                        StartTimers(); // Tiếp tục các bộ đếm thời gian
+                        label.Visible = false; // Ẩn nhãn thông báo
+                        gamemedia.controls.play(); // Tiếp tục phát nhạc
+                        pause = false; // Chuyển trạng thái thành không tạm dừng
+                    }
+                    else // Nếu đang chạy
+                    {
+                        // Đặt vị trí nhãn "PAUSED" ra giữa màn hình
+                        label.Location = new Point(this.Width / 2 - 120, 150);
+                        label.Text = "PAUSED"; // Hiển thị chữ "PAUSED"
+                        label.Visible = true; // Hiển thị nhãn
+                        gamemedia.controls.pause(); // Tạm dừng nhạc nền
+                        StopTimers(); // Dừng các bộ đếm thời gian
+                        pause = true; // Chuyển trạng thái thành tạm dừng
                     }
                 }
-            } while (!isValidPosition);
-            PictureBox rac = new PictureBox
+            }
+        }
+
+        private void Player_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+
+        }
+
+        private void MoveMunitionTimer_Tick(object sender, EventArgs e)
+        {
+            shootmedia.controls.play();
+            Collision();
+            for (int i = 0; i < munitions.Length; i++)
             {
-                Size = new Size(40, 40),
-                SizeMode = PictureBoxSizeMode.Zoom,
-                BorderStyle = BorderStyle.None,
-                Location = new Point(vitriX, -50) // Đặt vị trí ban đầu của rác
-            };
-            // Gán hình ảnh theo loại rác
-            if (loaiRac == 1) rac.Image = Rac1;
-            else if (loaiRac == 2) rac.Image = Rac2;
-            else rac.Image = Rac3;
-            racList.Add(rac); // Thêm rác vào danh sách quản lý
-            this.Controls.Add(rac); // Thêm rác vào giao diện
-        }
-
-
-        public void Tang_diem()
-        {
-            if (diem == null) return;
-            diem = diem + 5;
-            diem1.Text = $"Diem:{diem}";
-            An_diem.controls.play();
-            An_diem.settings.volume = 20;
-        }
-        public void Tru_nhe()
-        {
-            diem = diem - 3;
-            diem1.Text = $"Diem:{diem}";
-            Tru_diem_nhe.controls.play();
-            Tru_diem_nhe.settings.volume = 50;
-        }
-        public void Tru_nang()
-        {
-            diem = diem - 5;
-            diem1.Text = $"Diem:{diem}";
-            Tru_diem_nang.controls.play();
-            Tru_diem_nang.settings.volume = 50;
-        }
-
-        private void RacDichuyen_Tick_1(object sender, EventArgs e)
-        {
-            bottomBorder.Height = 390;
-            bottomBorder.Width = this.Width;
-            bottomBorder.Location = new Point(0, this.ClientSize.Height - bottomBorder.Height);
-            this.Controls.Add(bottomBorder);
-            foreach (var rac in racList.ToList())
-            {
-                rac.Top += td_roi; // Di chuyển rác xuống
-
-                // Kiểm tra nếu rác chạm đáy
-                if (rac.Top > bottomBorder.Height)
+                if (munitions[i].Top > 0)
                 {
-                    this.Controls.Remove(rac); // Xóa khỏi giao diện
-                    racList.Remove(rac);      // Xóa khỏi danh sách
-                    Tru_nang();               // Trừ điểm
+                    munitions[i].Visible = true;
+                    munitions[i].Top -= MunitionSpeed;
                 }
-
-                // Kiểm tra va chạm với nhân vật (Player)
-                if (rac.Bounds.IntersectsWith(Player1.Bounds))
+                else
                 {
-                    // Logic tăng/giảm điểm
-                    if (Player1.Visible == true && rac.Image == Rac1) Tang_diem();
-                    else Tru_nhe();
-                    // Xóa rác sau va chạm
-                    this.Controls.Remove(rac);
-                    racList.Remove(rac);
-                }
-                else if (rac.Bounds.IntersectsWith(Player2.Bounds))
-                {
-                    if (Player2.Visible == true && rac.Image == Rac2) Tang_diem();
-                    else Tru_nhe();
-                    this.Controls.Remove(rac);
-                    racList.Remove(rac);
-                }
-                else if (rac.Bounds.IntersectsWith(Player3.Bounds))
-                {
-                    if (Player3.Visible == true && rac.Image == Rac3) Tang_diem();
-                    Tru_nhe();
-                    this.Controls.Remove(rac);
-                    racList.Remove(rac);
+                    munitions[i].Visible = false;
+                    munitions[i].Location = new Point(Player.Location.X + 20, Player.Location.Y - i * 30);
                 }
             }
-            if (diem < 0) GameOver();
-            if (racList.Count <3)
-            {
-                SpawnRac();
-            }
 
+        }
+        /// <summary>
+        /// Di chuyển các đối tượng PictureBox (kẻ địch) xuống dưới màn hình.
+        /// Nếu kẻ địch vượt quá màn hình, vị trí sẽ được đặt lại về phía trên.
+        /// </summary>
+        /// <param name="array">Mảng chứa các PictureBox đại diện cho kẻ địch.</param>
+        /// <param name="speed">Tốc độ di chuyển của kẻ địch.</param>
+        private void MoveEnemies(PictureBox[] array, int speed)
+        {
+            // Duyệt qua từng kẻ địch trong mảng
+            for (int i = 0; i < array.Length; i++)
+            {
+                // Hiển thị kẻ địch (nếu đang bị ẩn)
+                array[i].Visible = true;
+
+                // Di chuyển kẻ địch xuống dưới màn hình theo tốc độ
+                array[i].Top += speed;
+
+                // Kiểm tra nếu kẻ địch đã vượt qua chiều cao của cửa sổ
+                if (array[i].Top > this.Height)
+                {
+                    // Đặt lại vị trí kẻ địch về phía trên màn hình
+                    // Vị trí X cách nhau 50 pixels và Y là -200 (phía trên cửa sổ)
+                    array[i].Location = new Point((i + 1) * 50, -200);
+                }
+            }
+        }
+
+        private void MoveEnemiesTimer_Tick(object sender, EventArgs e)
+        {
+            MoveEnemies(enemies, enemiesspeed);
+        }
+        private void Collision()
+        {
+            for (int i = 0; i < enemies.Length; i++)
+            {
+                if (munitions[0].Bounds.IntersectsWith(enemies[i].Bounds)
+                    || munitions[1].Bounds.IntersectsWith(enemies[i].Bounds)
+                    || munitions[2].Bounds.IntersectsWith(enemies[i].Bounds))
+                {
+                    score += 1;
+                    scorelabel.Text =  $"score: {score}";
+                    explosion.controls.play();
+                    enemies[i].Location = new Point((i + 1) * 50, -100);
+                }
+
+                if (Player.Bounds.IntersectsWith(enemies[i].Bounds))
+                {
+                    explosion.settings.volume = 30;
+                    explosion.controls.play();
+                    Player.Visible = false;
+                    GameOver("Game OVer");
+                }
+            }
+        }
+        private void GameOver(String str)
+        {
+            gamemedia.controls.stop();
+            shootmedia.controls.stop();
+            StopTimers(); // Dừng toàn bộ các Timer
+            EXIT.Visible = true;
+            REPLAY.Visible = true;
+            
+        }
+
+        // Stop Timers
+        private void StopTimers()
+        {
+            timer1.Stop();
+            MoveEnemiesTimer.Stop();
+            MoveMunitionTimer.Stop();
+        }
+
+        // Start Timers
+        private void StartTimers()
+        {
+            timer1.Start();
+            MoveEnemiesTimer.Start();
+            MoveMunitionTimer.Start();
+        }
+
+        private void REPLAY_Click(object sender, EventArgs e)
+        {
+            this.Controls.Clear();
+            InitializeComponent();
+            Application.Restart();
+        }
+
+        private void EXIT_Click(object sender, EventArgs e)
+        {
+            Environment.Exit(1);
         }
     }
 }
+
+
